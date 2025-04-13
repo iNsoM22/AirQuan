@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Firmware Upload</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      max-width: 500px;
+      margin: 60px auto;
+      padding: 20px;
+      background: #f7f9fc;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+
+    input, button {
+      padding: 12px;
+      width: 100%;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
+    .loading {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+
+    .file-label {
+      margin-top: 10px;
+      font-size: 0.9em;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <h2>Upload Firmware</h2>
+  <form id="uploadForm">
+    <input type="text" id="version" name="version" placeholder="Firmware Version (e.g. 1.0.2)" required />
+
+    <input type="file" id="file" name="file" accept=".bin" required />
+    <div id="fileLabel" class="file-label">No file selected.</div>
+
+    <button type="submit" id="submitBtn">Upload</button>
+  </form>
+
+  <div id="message"></div>
+
+  <script>
+    const form = document.getElementById('uploadForm');
+    const message = document.getElementById('message');
+    const fileInput = document.getElementById('file');
+    const fileLabel = document.getElementById('fileLabel');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Show file name when selected
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length > 0) {
+        fileLabel.textContent = `Selected: ${fileInput.files[0].name} (Click to change)`;
+      } else {
+        fileLabel.textContent = "No file selected.";
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const version = document.getElementById('version').value.trim();
+      const file = fileInput.files[0];
+
+      // Validation
+      if (!version) {
+        showMessage("Please enter a version number.", "error");
+        return;
+      }
+
+      if (!file) {
+        showMessage("Please select a .bin file to upload.", "error");
+        return;
+      }
+
+      // Prepare form data
+      const formData = new FormData();
+      formData.append('version', version);
+      formData.append('file', file);
+
+      // Show uploading status
+      showMessage("Uploading firmware...", "loading");
+      submitBtn.disabled = true;
+
+      try {
+        const response = await fetch('/upload_file', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const result = await response.json();
+        submitBtn.disabled = false;
+
+        if (response.ok) {
+          showMessage(`✅ ${result.message}`, "success");
+          form.reset();
+          fileLabel.textContent = "No file selected.";
+        } else {
+          showMessage(`❌ ${result.error}`, "error");
+        }
+      } catch (err) {
+        submitBtn.disabled = false;
+        showMessage("Something went wrong while uploading.", "error");
+      }
+    });
+
+    function showMessage(text, type) {
+      message.innerHTML = `<div class="status ${type}">${text}</div>`;
+    }
+  </script>
+</body>
+</html>
